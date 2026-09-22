@@ -1,0 +1,430 @@
+/* =========================================================================
+   pressé — cinematic scroll experience
+   All layout + resting states for the animated elements live here.
+   js/cinematic.js drives them with GSAP + ScrollTrigger.
+   ========================================================================= */
+
+.cinematic {
+  position: relative;
+  background: var(--cream);
+}
+
+.cinematic__stage {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--cream);
+  /* 3D context for the cursor-following nail float (CHANGE 3) */
+  perspective: 1000px;
+  perspective-origin: 50% 45%;
+}
+
+/* -------------------------------------------------------------------------
+   Scroll-controlled video (primary, desktop) + fallback photograph (mobile)
+   ------------------------------------------------------------------------- */
+
+/* The pinned stage makes this behave as position:fixed while the cinematic
+   section is on screen. Its currentTime is driven by scroll in cinematic.js. */
+.cinematic__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  z-index: 1;
+  background: var(--cream);
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.cinematic__photo {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wide photo: two full-bleed copies of the same image, stacked. The scroll
+   scales + translates BOTH together (transform = GPU-cheap) and crossfades
+   their OPACITY (also GPU-cheap) — so the blur is never recalculated per frame. */
+.cinematic__photo.is-wide {
+  z-index: 1;
+}
+.cinematic__photo.is-wide img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* bias the crop up so the navy fur / mute icon stay out of frame */
+  object-position: 50% 40%;
+  /* promote to its own compositor layer up front */
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+/* sharp copy — a constant 1px soft-focus, rasterised once, never animated */
+.cinematic__photo.is-wide .is-sharp {
+  filter: blur(1px) saturate(1.04);
+}
+/* pre-blurred copy — a STATIC heavy blur, rasterised once by the compositor;
+   the timeline only fades this in over the sharp copy */
+.cinematic__photo.is-wide .is-blur {
+  opacity: 0;
+  filter: blur(20px) brightness(1.14) saturate(0.82);
+}
+
+/* Cream wash at rest; the timeline re-tints it to a warm nude and pushes it
+   opaque to fill the screen during the invisible photo -> illustration swap. */
+.cinematic__veil {
+  position: absolute;
+  inset: 0;
+  background: var(--cream);
+  opacity: 0.14;
+  z-index: 4;
+  will-change: opacity;
+}
+
+/* -------------------------------------------------------------------------
+   Illustrated nail + annotation figure
+   ------------------------------------------------------------------------- */
+
+.cinematic__figure {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* centring on the `translate` property leaves `transform` free for the
+     cursor-follow float (set by cinematic.js) */
+  translate: -50% -50%;
+  transform: none;
+  transform-style: preserve-3d;
+  will-change: transform;
+  /* 122vh keeps the derived height (width * 620/880) within ~86vh so the
+     diagram never overflows short / landscape viewports */
+  width: min(880px, 92vw, 122vh);
+  aspect-ratio: 880 / 620;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cinematic__nail {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateZ(0);
+  /* the source PNG is mostly transparent padding; 58% keeps the actual nail
+     ~320px tall on desktop — prominent, not overwhelming.
+     js/cinematic.js re-parks it (closeupPosition) to line up with the video. */
+  height: 58%;
+  width: auto;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+/* soft floating drop-shadow beneath the illustration; the float loop gives it a
+   little parallax so the nail reads as lifted off the page */
+.cinematic__nail-shadow {
+  position: absolute;
+  left: 49.6%;
+  top: 55%;
+  width: 24%;
+  height: 6%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center,
+    rgba(26, 23, 20, 0.22) 0%,
+    rgba(26, 23, 20, 0.10) 45%,
+    rgba(26, 23, 20, 0) 78%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.cinematic__arrows {
+  position: absolute;
+  inset: 0;
+  z-index: 1;   /* below the labels */
+  pointer-events: none;
+}
+
+/* Every arrow is the SAME source image (curlyarrow1.svg) used as a mask so it
+   can be tinted to --muted. Position + orientation + size vary per annotation:
+   the .arN rules set placement and base size; js/cinematic.js sets the
+   rotate / flip / draw-in and animates opacity + translate on scroll. */
+.annotation__arrow {
+  position: absolute;
+  aspect-ratio: 1 / 1;
+  background-color: var(--muted);
+  -webkit-mask: url(../assets/images/curlyarrow1.svg) center / contain no-repeat;
+          mask: url(../assets/images/curlyarrow1.svg) center / contain no-repeat;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+/* placement + size variety — percentages are of the 880x620 figure box,
+   arrows bracket the nail and reach toward their label */
+.annotation__arrow.ar0 { left: 28%; top: 55%;  width: 13%; }   /* -> BIAB Base (lower left)        */
+.annotation__arrow.ar1 { left: 58%; top: 7%;   width: 15%; }   /* -> High-shine Finish (top right) */
+.annotation__arrow.ar2 { left: 58%; top: 24%;  width: 11%; }   /* -> Precision Shape (right)       */
+.annotation__arrow.ar3 { left: 29%; top: 39%;  width: 11%; }   /* -> Durable Design (left)         */
+
+.cinematic__annotations {
+  position: absolute;
+  inset: 0;
+  z-index: 2;   /* labels always sit above the connector lines */
+}
+
+.annotation__text {
+  position: absolute;
+  width: clamp(176px, 23vw, 224px);
+  padding: 0.5rem 0.7rem;
+  /* soft feathered cream backing so the label stays fully readable even if a
+     line passes near it — no hard rectangle */
+  background: radial-gradient(ellipse at center,
+    rgba(250, 247, 242, 0.94) 0%,
+    rgba(250, 247, 242, 0.8) 55%,
+    rgba(250, 247, 242, 0) 100%);
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* keep the label on one line; the description below may wrap */
+.annotation__text .annotation__label {
+  margin: 0 0 0.35em;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+
+.annotation__desc {
+  margin: 0;
+}
+
+/* Placements bracket the illustrated nail; each curly flourish ends with an
+   arrowhead ~15-20px short of its label (see index.html). */
+.annotation__text.a0 {            /* BIAB Base — lower left    */
+  left: 3%;
+  top: 66%;
+  transform: translateY(-50%);
+  text-align: left;
+}
+.annotation__text.a1 {            /* High-shine — top right    */
+  right: 4%;
+  top: 11%;
+  transform: translateY(-50%);
+  text-align: right;
+}
+.annotation__text.a2 {            /* Precision Shape — right   */
+  left: 71%;
+  top: 33%;
+  transform: translateY(-50%);
+  text-align: left;
+}
+.annotation__text.a3 {            /* Durable Design — left     */
+  right: 71%;
+  top: 51%;
+  transform: translateY(-50%);
+  text-align: right;
+}
+
+/* -------------------------------------------------------------------------
+   Intro overlay — logo, tagline
+   ------------------------------------------------------------------------- */
+
+.cinematic__intro {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;   /* -inner centres; -glow overlays out of flow */
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Soft, feathered cream vignette the wordmark floats in — like a masthead on a
+   magazine cover. A real element (not a pseudo) so the timeline can fade it. */
+.cinematic__intro-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(150vh, 1100px);
+  height: min(150vh, 1100px);
+  pointer-events: none;
+  background: radial-gradient(circle at center,
+    rgba(250, 247, 242, 0.95) 0%,
+    rgba(250, 247, 242, 0.82) 16%,
+    rgba(250, 247, 242, 0.45) 33%,
+    rgba(250, 247, 242, 0.14) 48%,
+    rgba(250, 247, 242, 0)    62%);
+}
+
+.cinematic__intro-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  text-align: center;
+}
+
+/* The source SVGs sit on a large square canvas with generous padding.
+   Constrain width + height and cover-crop so the wordmark reads at a
+   deliberate size without the surrounding whitespace throwing off the layout. */
+.cinematic__logo {
+  width: clamp(190px, 24vw, 300px);
+  height: clamp(58px, 7.5vw, 92px);
+  object-fit: cover;
+  object-position: center;
+}
+
+.cinematic__tagline {
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Scroll hint
+   ------------------------------------------------------------------------- */
+
+.cinematic__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 3.5vh;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  z-index: 6;
+}
+
+.cinematic__hint-word {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.34em;
+  font-size: 0.625rem;
+}
+
+.cinematic__hint-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid var(--muted);
+  border-bottom: 1px solid var(--muted);
+  transform: rotate(45deg);
+  animation: hintNudge 2.2s var(--ease-out) infinite;
+}
+
+@keyframes hintNudge {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.5; }
+  50%      { transform: rotate(45deg) translate(3px, 3px); opacity: 1; }
+}
+
+/* =========================================================================
+   Static stack — the page ships with `.is-static` on .cinematic and
+   js/cinematic.js removes it to upgrade to the pinned experience.
+   So this is what a no-JS visit and a prefers-reduced-motion visit both get:
+   intro, then the photo, then the fully-annotated nail, in normal flow.
+   ========================================================================= */
+
+.cinematic.is-static .cinematic__stage {
+  position: static;
+  height: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12vh 6vw;
+}
+
+.cinematic.is-static .cinematic__intro {
+  order: 1;
+  display: block;   /* text on plain cream — no grid / vignette needed */
+}
+.cinematic.is-static .cinematic__photo.is-wide { order: 2; }
+.cinematic.is-static .cinematic__figure { order: 3; }
+
+.cinematic.is-static .cinematic__photo.is-wide {
+  position: relative;
+  inset: auto;
+  margin: 0 auto 10vh;
+  width: min(460px, 88vw);
+  aspect-ratio: 4 / 5;
+}
+.cinematic.is-static .cinematic__photo.is-wide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 46%;
+}
+
+.cinematic.is-static .cinematic__video,
+.cinematic.is-static .cinematic__veil,
+.cinematic.is-static .cinematic__hint,
+.cinematic.is-static .cinematic__arrows,
+.cinematic.is-static .cinematic__nail-shadow,
+.cinematic.is-static .cinematic__intro-glow {
+  display: none;
+}
+
+.cinematic.is-static .cinematic__intro {
+  position: relative;
+  inset: auto;
+  transform: none;
+  margin: 0 auto 9vh;
+}
+
+.cinematic.is-static .cinematic__figure {
+  position: relative;
+  inset: auto;
+  left: auto;
+  top: auto;
+  transform: none;
+  translate: none;
+  width: 100%;
+  aspect-ratio: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.cinematic.is-static .cinematic__nail {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  height: auto;
+  width: min(300px, 62vw);
+}
+
+.cinematic.is-static .cinematic__annotations {
+  position: relative;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  max-width: 440px;
+}
+
+.cinematic.is-static .annotation__text {
+  position: relative;
+  inset: auto;
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  width: 100%;
+  text-align: center;
+}

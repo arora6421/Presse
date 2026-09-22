@@ -1,0 +1,111 @@
+/* =========================================================================
+   pressé — responsive breakpoints for the cinematic experience
+   Desktop-first. Breakpoints: 1024 / 768 / 480 / 375.
+   ========================================================================= */
+
+/* ---- Tablet -------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .annotation__text {
+    width: clamp(140px, 22vw, 180px);
+  }
+}
+
+/* ---- Mobile: the annotation diagram reflows to a stacked column --------- */
+@media (max-width: 768px) {
+
+  .cinematic__intro {
+    top: 20%;
+  }
+
+  /* Figure becomes a vertical stack: nail on top, labels beneath it.
+     Still absolutely centred (translate: -50% -50% from the base rule); the
+     float loop only adds a gentle vertical bob on touch devices. */
+  .cinematic__figure {
+    top: 50%;
+    width: 92vw;
+    aspect-ratio: auto;
+    height: 84vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 6vh;
+  }
+
+  .cinematic__nail {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    height: 34vh;
+    width: auto;
+    margin-bottom: 4vh;
+  }
+
+  /* Connector arrows + the floating shadow don't survive the reflow. */
+  .cinematic__arrows,
+  .cinematic__nail-shadow {
+    display: none;
+  }
+
+  .cinematic__annotations {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3.2vh;   /* generous separation now that lines are gone */
+    width: 100%;
+  }
+
+  .annotation__text,
+  .annotation__text.a0,
+  .annotation__text.a1,
+  .annotation__text.a2,
+  .annotation__text.a3 {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: min(330px, 84vw);
+    text-align: center;
+  }
+
+  .annotation__label {
+    letter-spacing: 0.3em;
+  }
+}
+
+/* ---- Small phones ------------------------------------------------------- */
+@media (max-width: 480px) {
+  .cinematic__nail {
+    height: 31vh;
+  }
+  .cinematic__tagline,
+  .annotation__label {
+    font-size: 0.625rem;
+    letter-spacing: 0.28em;
+  }
+  .annotation__desc {
+    font-size: 0.625rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .cinematic__figure {
+    padding-top: 4vh;
+    height: 86vh;
+  }
+  .cinematic__nail {
+    height: 29vh;
+    margin-bottom: 3vh;
+  }
+  .annotation__text,
+  .annotation__text.a0,
+  .annotation__text.a1,
+  .annotation__text.a2,
+  .annotation__text.a3 {
+    width: 88vw;
+  }
+}
